@@ -21,6 +21,12 @@ contract Utilities is AccessControl {
     uint256 internal constant LPB_A_CAP = 25 * 1e6;
     uint256 internal constant LPB_A_CAP_PARA = LPB_A_CAP * PARA_PRECISION;
 
+    uint256 public burnFee;
+    uint256 public rewardFee;
+
+    bool public burnFeeEnabled;
+    bool public rewardFeeEnabled;
+
     struct Stake {
         uint256 stakeId;
         uint256 stakedParas;

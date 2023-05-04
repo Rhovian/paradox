@@ -25,7 +25,11 @@ contract StakePool is AccessControl, Utilities {
     constructor(
         address _para,
         uint256 _rewardsPerSecond,
-        address _rewardsPoolAddress
+        address _rewardsPoolAddress,
+        uint256 _burnFee,
+        uint256 _rewardFee,
+        bool _burnFeeEnabled,
+        bool _rewardFeeEnabled
     ) {
         _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
         // _grantRole(MINTER_ROLE, msg.sender);
@@ -34,6 +38,14 @@ contract StakePool is AccessControl, Utilities {
         para = _para;
         PARA = IPARA(_para);
         rewardsPoolAddress = _rewardsPoolAddress;
+
+        // set fees
+        require(_burnFee + _rewardFee <= 100, "PARA: fees too high");
+        
+        burnFee = _burnFee;
+        rewardFee = _rewardFee;
+        burnFeeEnabled = _burnFeeEnabled;
+        rewardFeeEnabled = _rewardFeeEnabled;
 
         addPool(_rewardsPerSecond);
     }
@@ -108,13 +120,17 @@ contract StakePool is AccessControl, Utilities {
         );
 
         // burn 33% of the amount
-        PARA.burn((newStakedParas * 33) / 100);
+        if (burnFeeEnabled) {
+            PARA.burn((newStakedParas * burnFee) / 100);
+        }
 
         // send the other 33% to the rewards pool
-        IERC20(para).safeTransfer(
-            rewardsPoolAddress,
-            (newStakedParas * 33) / 100
-        );
+        if (rewardFeeEnabled) {
+            IERC20(para).safeTransfer(
+                rewardsPoolAddress,
+                (newStakedParas * rewardFee) / 100
+            );
+        }
     }
 
     /**
@@ -316,5 +332,28 @@ contract StakePool is AccessControl, Utilities {
         }
 
         (stakeReturn, payout) = calcStakeReturn(usr, stk, servedDays);
+    }
+
+    /** Fee functions */
+    function setBurnFee(uint256 _fee) external {
+        require(hasRole(DEFAULT_ADMIN_ROLE, msg.sender), "Caller is not admin");
+        require(_fee <= 100, "Fee must be less than 100");
+        burnFee = _fee;
+    }
+
+    function setRewardFee(uint256 _fee) external {
+        require(hasRole(DEFAULT_ADMIN_ROLE, msg.sender), "Caller is not admin");
+        require(_fee <= 100, "Fee must be less than 100");
+        rewardFee = _fee;
+    }
+
+    function setBurnEnabled(bool _enabled) external {
+        require(hasRole(DEFAULT_ADMIN_ROLE, msg.sender), "Caller is not admin");
+        burnFeeEnabled = _enabled;
+    }
+
+    function setRewardEnabled(bool _enabled) external {
+        require(hasRole(DEFAULT_ADMIN_ROLE, msg.sender), "Caller is not admin");
+        rewardFeeEnabled = _enabled;
     }
 }
